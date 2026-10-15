@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Чат-бот: бронирование и добавление апартаментов</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --primary: #2979ff;
+      --secondary: #e0e0e0;
+      --border: #cccccc;
+      --success: #00c853;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+    }
+
+    .chat-container {
+      max-width: 560px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 1.25rem;
+      color: var(--text);
+    }
+
+    p {
+      color: #666;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 480px) {
+      .btn-grid { grid-template-columns: 1fr; }
+    }
+
+    button.btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 14px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font-weight: 600;
+      margin: 8px 0;
+      transition: opacity 0.2s;
+    }
+
+    button.btn:hover {
+      opacity: 0.9;
+    }
+
+    button.btn.secondary {
+      background: var(--secondary);
+      color: var(--text);
+    }
+
+    .apartment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .apartment-card {
+      background: #f5f5f5;
+      border: 1px solid var(--border);
+      padding: 14px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .apartment-card:hover {
+      border-color: var(--primary);
+    }
+
+    .apartment-info {
+      flex: 1;
+    }
+
+    .apartment-name {
+      font-weight: bold;
+      font-size: 1rem;
+      color: var(--text);
+      margin: 0 0 4px 0;
+    }
+
+    .apartment-address {
+      font-size: 0.85rem;
+      color: #666;
+      margin: 0;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fafafa;
+      color: var(--text);
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #ffffff;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .success-msg {
+      color: var(--success);
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    a.payment-link {
+      display: inline-block;
+      margin: 16px 0;
+      padding: 12px 16px;
+      background: var(--primary);
+      color: #ffffff;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    button.copy-btn {
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.9rem;
+    }
+
+    button.copy-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <!-- Экран 1: выбор города -->
+    <div id="screen-city" class="screen">
+      <h2>Выберите город</h2>
+      <div class="btn-grid">
+        <button class="btn" onclick="selectCity('Иркутск')">Иркутск</button>
+        <button class="btn" onclick="selectCity('Калуга')">Калуга</button>
+        <button class="btn" onclick="selectCity('Москва')">Москва</button>
+        <button class="btn" onclick="selectCity('Южно‑Сахалинск')">Южно‑Сахалинск</button>
+        <button class="btn" onclick="selectCity('Улан‑Удэ')">Улан‑Удэ</button>
+        <button class="btn" onclick="selectCity('Краснодар')">Краснодар</button>
+      </div>
+    </div>
+
+    <!-- Экран 2: выбор действия -->
+    <div id="screen-action" class="screen hidden">
+      <h2 id="action-city-title"></h2>
+      <button class="btn" onclick="showApartmentList()">Выбрать апартаменты из списка</button>
+      <button class="btn secondary" onclick="showAddForm()">Добавить апартаменты</button>
+      <!-- Кнопка «Назад к выбору города» -->
+      <button class="btn secondary" onclick="resetToCity()">← Назад к выбору города</button>
+    </div>
+
+    <!-- Сценарий A: список апартаментов -->
+    <div id="screen-apartment-list" class="screen hidden">
+      <h2>Апартаменты в <span id="list-city"></span></h2>
+      <p>Выберите объект для бронирования:</p>
+      <div class="apartment-list" id="apartment-list-container"></div>
+      <button class="btn secondary" onclick="goBackToAction()">← Назад</button>
+    </div>
+
+    <!-- Сценарий A: форма бронирования -->
+    <div id="screen-booking-form" class="screen hidden">
+      <h2>Бронирование</h2>
+      <p id="booking-apartment-name" style="font-weight:600; margin-bottom:16px;"></p>
+      <form onsubmit="handleBooking(event)">
+        <div class="form-group">
+          <label>Стоимость проживания, ₽</label>
+          <input type="number" id="booking-price" min="1" placeholder="Например, 3500" required />
+        </div>
+        <div class="form-group">
+          <label>Дата заезда</label>
+          <input type="date" id="booking-checkin" required />
+        </div>
+        <div class="form-group">
+          <label>Дата выезда</label>
+          <input type="date" id="booking-checkout" required />
+        </div>
+        <button type="submit" class="btn">Получить платёжную ссылку</button>
+      </form>
+      <button class="btn secondary" onclick="goBackToList()">← Назад</button>
+    </div>
+
+    <!-- Сценарий A: результат бронирования -->
+    <div id="screen-payment-link" class="screen hidden">
+      <h2>Платёж</h2>
+      <p>Для оплаты перейдите по ссылке:</p>
+      <a id="payment-link-display" href="#" target="_blank" class="payment-link"></a>
+      <br>
+      <button id="copy-link-btn" class="copy-btn" onclick="copyLink()">Копировать ссылку</button>
+      <button class="btn secondary" onclick="resetToCity()">Начать заново</button>
+    </div>
+
+    <!-- Сценарий B: форма добавления апартаментов -->
+    <div id="screen-add-apartment" class="screen hidden">
+      <h2>Добавить апартаменты</h2>
+      <form onsubmit="handleAddApartment(event)">
+        <div class="form-group">
+          <label>Название апартаментов</label>
+          <input type="text" id="add-name" placeholder="Например, Студия у вокзала" required />
+        </div>
+        <div class="form-group">
+          <label>Адрес апартаментов</label>
+          <input type="text" id="add-address" placeholder="Например, ул. Гагарина, 5" required />
+        </div>
+        <div class="form-group">
+          <label>ФИО собственника</label>
+          <input type="text" id="add-owner-name" placeholder="ИП Иванов И.Н." required />
+        </div>
+        <div class="form-group">
+          <label>Телефон собственника</label>
+          <input type="tel" id="add-owner-phone" placeholder="+7…" required />
+        </div>
+        <div class="form-group">
+          <label>ИНН собственника</label>
+          <input type="text" id="add-owner-inn" placeholder="10 или 12 цифр" required />
+        </div>
+        <button type="submit" class="btn">Добавить объект</button>
+      </form>
+      <button class="btn secondary" onclick="goBackToAction()">← Назад</button>
+    </div>
+
+    <!-- Сценарий B: подтверждение добавления -->
+    <div id="screen-added-confirm" class="screen hidden">
+      <h2>Объект добавлен</h2>
+      <p class="success-msg">Апартаменты успешно добавлены в систему.</p>
+      <button class="btn" onclick="resetToCity()">Вернуться к выбору города</button>
+    </div>
+  </div>
+
+  <script>
+    // Данные апартаментов (можно позже заменить на API/БД)
+    const apartmentsData = [
+      { name: 'Апартаменты у парка', address: 'ул. Парковая, д. 10' },
+      { name: 'Студия в центре', address: 'пр. Ленина, д. 45, кв. 12' }
+    ];
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    let selectedCity = '';
+    function selectCity(city) {
+      selectedCity = city;
+      document.getElementById('action-city-title').textContent = `Что хотите сделать в ${city}?`;
+      document.getElementById('list-city').textContent = city;
+      showScreen('screen-action');
+    }
+
+    function goBackToAction() { showScreen('screen-action'); }
+    function resetToCity() { showScreen('screen-city'); }
+
+    function showApartmentList() {
+      const container = document.getElementById('apartment-list-container');
+      container.innerHTML = '';
+
+      apartmentsData.forEach(apt => {
+        const card = document.createElement('div');
+        card.className = 'apartment-card';
+        card.onclick = () => selectApartment(apt.name, apt.address);
+        card.innerHTML = `
+          <div class="apartment-info">
+            <p class="apartment-name">${apt.name}</p>
+            <p class="apartment-address">${apt.address}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      showScreen('screen-apartment-list');
+    }
+
+    function showAddForm() { showScreen('screen-add-apartment'); }
+
+    function selectApartment(name, address) {
+      const el = document.getElementById('booking-apartment-name');
+      // Если нужно показывать адрес в форме бронирования — раскомментируйте строку ниже:
+      // el.textContent = `${name} (${address})`;
+      el.textContent = name;
+      showScreen('screen-booking-form');
+    }
+
+    function handleBooking(e) {
+      e.preventDefault();
+      const price = document.getElementById('booking-price').value;
+      const checkin = document.getElementById('booking-checkin').value;
+      const checkout = document.getElementById('booking-checkout').value;
+
+      if (checkin && checkout && new Date(checkin) >= new Date(checkout)) {
+        alert('Дата заезда должна быть раньше даты выезда.');
+        return;
+      }
+
+      const link = `https://pay.example.com/order?city=${selectedCity}&apt=${encodeURIComponent(document.getElementById('booking-apartment-name').textContent)}&price=${price}&checkin=${checkin}&checkout=${checkout}`;
+      const display = document.getElementById('payment-link-display');
+      display.href = link;
+      display.textContent = link;
+      showScreen('screen-payment-link');
+    }
+
+    function copyLink() {
+      const link = document.getElementById('payment-link-display').href;
+      navigator.clipboard.writeText(link).then(() => {
+        alert('Ссылка скопирована!');
+      }).catch(err => {
+        console.error('Ошибка копирования: ', err);
+        alert('Не удалось скопировать ссылку');
+      });
+    }
+
+    function handleAddApartment(e) {
+      e.preventDefault();
+      showScreen('screen-added-confirm');
+    }
+
+    function goBackToList() { showScreen('screen-apartment-list'); }
+  </script>
+</body>
+</html>
